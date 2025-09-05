@@ -20,6 +20,8 @@ const Students = () => {
   const [search, setSearch] = useState('');
   const [classId, setClassId] = useState('');
   const [gender, setGender] = useState('');
+  const [specialtySearch, setSpecialtySearch] = useState('');
+  const [classSearch, setClassSearch] = useState('');
 
   useEffect(() => {
     if (loading || !isAuthenticated) return;
@@ -140,6 +142,7 @@ const Students = () => {
       if (res.success) {
         setShowSpecialtyForm(false);
         form.reset();
+        setSpecialtySearch('');
         // Recharger la liste des spécialités
         const spec = await studentsService.listSpecialties();
         if (spec.success) setSpecialties(spec.data);
@@ -154,6 +157,17 @@ const Students = () => {
       setSubmittingSpecialty(false);
     }
   };
+
+  // Fonctions de filtrage
+  const filteredSpecialties = specialties.filter(specialty => 
+    specialty.name.toLowerCase().includes(specialtySearch.toLowerCase()) ||
+    specialty.code.toLowerCase().includes(specialtySearch.toLowerCase())
+  );
+
+  const filteredClasses = classes.filter(cls => 
+    cls.name.toLowerCase().includes(classSearch.toLowerCase()) ||
+    cls.level.toLowerCase().includes(classSearch.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -243,6 +257,43 @@ const Students = () => {
               <X className="w-5 h-5" />
             </button>
           </div>
+          
+          {/* Liste des classes existantes */}
+          <div className="mb-6">
+            <h3 className="text-md font-medium text-secondary-700 mb-3">الفصول الموجودة</h3>
+            <div className="relative mb-3">
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-secondary-400" />
+              <input
+                type="text"
+                placeholder="البحث في الفصول..."
+                className="input-field pr-10"
+                value={classSearch}
+                onChange={(e) => setClassSearch(e.target.value)}
+                dir="rtl"
+              />
+            </div>
+            <div className="max-h-40 overflow-y-auto border border-secondary-200 rounded-lg p-3">
+              {filteredClasses.length > 0 ? (
+                <div className="space-y-2">
+                  {filteredClasses.map((cls) => (
+                    <div key={cls._id} className="flex justify-between items-center p-2 bg-secondary-50 rounded hover:bg-secondary-100">
+                      <div>
+                        <span className="font-medium">{cls.name}</span>
+                        <span className="text-sm text-secondary-600 mr-2"> - {cls.level}</span>
+                        {cls.specialty && (
+                          <span className="text-sm text-primary-600">({cls.specialty.name})</span>
+                        )}
+                      </div>
+                      <span className="text-sm text-secondary-500">السعة: {cls.capacity}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-secondary-500 text-center py-4">لا توجد فصول</p>
+              )}
+            </div>
+          </div>
+
           <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={onSubmitClass}>
             <div>
               <label className="label">اسم الفصل</label>
@@ -275,7 +326,7 @@ const Students = () => {
               <input type="number" name="capacity" className="input-field" min="1" max="50" defaultValue="30" />
             </div>
             <div className="md:col-span-2 flex justify-end gap-2 mt-2">
-              <button type="button" className="btn-secondary" onClick={() => setShowClassForm(false)} disabled={submittingClass}>إلغاء</button>
+              <button type="button" className="btn-secondary" onClick={() => {setShowClassForm(false); setClassSearch('');}} disabled={submittingClass}>إلغاء</button>
               <button type="submit" className="btn-primary" disabled={submittingClass}>{submittingClass ? 'جارٍ الحفظ...' : 'حفظ'}</button>
             </div>
           </form>
@@ -290,6 +341,42 @@ const Students = () => {
               <X className="w-5 h-5" />
             </button>
           </div>
+          
+          {/* Liste des spécialités existantes */}
+          <div className="mb-6">
+            <h3 className="text-md font-medium text-secondary-700 mb-3">التخصصات الموجودة</h3>
+            <div className="relative mb-3">
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-secondary-400" />
+              <input
+                type="text"
+                placeholder="البحث في التخصصات..."
+                className="input-field pr-10"
+                value={specialtySearch}
+                onChange={(e) => setSpecialtySearch(e.target.value)}
+                dir="rtl"
+              />
+            </div>
+            <div className="max-h-40 overflow-y-auto border border-secondary-200 rounded-lg p-3">
+              {filteredSpecialties.length > 0 ? (
+                <div className="space-y-2">
+                  {filteredSpecialties.map((specialty) => (
+                    <div key={specialty._id} className="flex justify-between items-center p-2 bg-secondary-50 rounded hover:bg-secondary-100">
+                      <div>
+                        <span className="font-medium">{specialty.name}</span>
+                        <span className="text-sm text-secondary-600 mr-2"> - {specialty.code}</span>
+                        {specialty.description && (
+                          <div className="text-sm text-secondary-500 mt-1">{specialty.description}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-secondary-500 text-center py-4">لا توجد تخصصات</p>
+              )}
+            </div>
+          </div>
+
           <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={onSubmitSpecialty}>
             <div>
               <label className="label">اسم التخصص</label>
@@ -304,7 +391,7 @@ const Students = () => {
               <textarea name="description" className="input-field" rows="3" />
             </div>
             <div className="md:col-span-2 flex justify-end gap-2 mt-2">
-              <button type="button" className="btn-secondary" onClick={() => setShowSpecialtyForm(false)} disabled={submittingSpecialty}>إلغاء</button>
+              <button type="button" className="btn-secondary" onClick={() => {setShowSpecialtyForm(false); setSpecialtySearch('');}} disabled={submittingSpecialty}>إلغاء</button>
               <button type="submit" className="btn-primary" disabled={submittingSpecialty}>{submittingSpecialty ? 'جارٍ الحفظ...' : 'حفظ'}</button>
             </div>
           </form>
