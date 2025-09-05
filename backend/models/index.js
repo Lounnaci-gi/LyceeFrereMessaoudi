@@ -235,6 +235,11 @@ const studentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  schoolingType: {
+    type: String,
+    enum: ['externe', 'demi-pensionnaire'],
+    required: true
+  },
   isActive: {
     type: Boolean,
     default: true

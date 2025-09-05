@@ -170,6 +170,47 @@ body {
   .scale-in {
     @apply animate-scale-in;
   }
+
+  /* Classes utilitaires pour les couleurs de texte adaptatives */
+  .text-adaptive-primary {
+    @apply text-secondary-900;
+  }
+
+  .text-adaptive-secondary {
+    @apply text-secondary-600;
+  }
+
+  .text-adaptive-muted {
+    @apply text-secondary-500;
+  }
+
+  .text-adaptive-subtle {
+    @apply text-secondary-400;
+  }
+
+  .text-adaptive-label {
+    @apply text-secondary-700;
+  }
+
+  .text-adaptive-help {
+    @apply text-secondary-500;
+  }
+
+  .text-adaptive-error {
+    @apply text-danger-600;
+  }
+
+  .text-adaptive-success {
+    @apply text-success-600;
+  }
+
+  .text-adaptive-warning {
+    @apply text-warning-600;
+  }
+
+  .text-adaptive-info {
+    @apply text-primary-600;
+  }
 }
 
 /* Responsive design pour mobile */
@@ -197,32 +238,310 @@ body {
 }
 
 /* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .dark {
-    @apply bg-secondary-900 text-white;
-  }
+.dark {
+  @apply bg-secondary-900 text-white;
+}
 
-  .dark .card {
-    @apply bg-secondary-800 border-secondary-700;
-  }
+/* Couleurs de texte adaptatives */
+.text-primary {
+  @apply text-secondary-900;
+}
 
-  .dark .table th {
-    @apply bg-secondary-800 text-secondary-200 border-secondary-700;
-  }
+.dark .text-primary {
+  @apply text-white;
+}
 
-  .dark .table td {
-    @apply text-secondary-100 border-secondary-700;
-  }
+.text-secondary {
+  @apply text-secondary-600;
+}
 
-  .dark .table tbody tr:hover {
-    @apply bg-secondary-700;
-  }
+.dark .text-secondary {
+  @apply text-secondary-300;
+}
 
-  .dark .input-field {
-    @apply bg-secondary-800 border-secondary-600 text-white;
-  }
+.text-muted {
+  @apply text-secondary-500;
+}
 
-  .dark .input-field:focus {
-    @apply border-primary-500;
-  }
+.dark .text-muted {
+  @apply text-secondary-400;
+}
+
+.text-subtle {
+  @apply text-secondary-400;
+}
+
+.dark .text-subtle {
+  @apply text-secondary-500;
+}
+
+.dark .card {
+  @apply bg-secondary-800 border-secondary-700;
+}
+
+.dark .card-header {
+  @apply border-secondary-700;
+}
+
+.dark .card-title {
+  @apply text-white;
+}
+
+.dark .card-subtitle {
+  @apply text-secondary-300;
+}
+
+.dark .table th {
+  @apply bg-secondary-800 text-secondary-200 border-secondary-700;
+}
+
+.dark .table td {
+  @apply text-secondary-100 border-secondary-700;
+}
+
+.dark .table tbody tr:hover {
+  @apply bg-secondary-700;
+}
+
+.dark .input-field {
+  @apply bg-secondary-800 border-secondary-600 text-white;
+}
+
+.dark .input-field:focus {
+  @apply border-primary-500;
+}
+
+.dark .input-field::placeholder {
+  @apply text-secondary-400;
+}
+
+/* Labels et textes de formulaire */
+.dark label {
+  @apply text-secondary-200;
+}
+
+.dark .form-label {
+  @apply text-secondary-200;
+}
+
+.dark .form-help {
+  @apply text-secondary-400;
+}
+
+.dark .form-error {
+  @apply text-danger-400;
+}
+
+/* Textes de statut et badges */
+.dark .status-text {
+  @apply text-secondary-200;
+}
+
+.dark .status-active {
+  @apply text-success-400;
+}
+
+.dark .status-inactive {
+  @apply text-secondary-400;
+}
+
+.dark .status-pending {
+  @apply text-warning-400;
+}
+
+.dark .status-error {
+  @apply text-danger-400;
+}
+
+.dark .btn-primary {
+  @apply bg-primary-600 hover:bg-primary-700;
+}
+
+.dark .btn-secondary {
+  @apply bg-secondary-700 hover:bg-secondary-600 text-white;
+}
+
+.dark .badge-primary {
+  @apply bg-primary-900 text-primary-200;
+}
+
+.dark .badge-secondary {
+  @apply bg-secondary-700 text-secondary-200;
+}
+
+.dark .badge-success {
+  @apply bg-success-900 text-success-200;
+}
+
+.dark .badge-warning {
+  @apply bg-warning-900 text-warning-200;
+}
+
+.dark .badge-danger {
+  @apply bg-danger-900 text-danger-200;
+}
+
+.dark .sidebar {
+  @apply bg-secondary-800 border-secondary-700;
+}
+
+.dark .sidebar h1 {
+  @apply text-white;
+}
+
+.dark .sidebar p {
+  @apply text-secondary-300;
+}
+
+.dark .sidebar button {
+  @apply text-secondary-200 hover:bg-secondary-700;
+}
+
+.dark .sidebar button:hover {
+  @apply text-white;
+}
+
+.dark header {
+  @apply bg-secondary-800 border-secondary-700;
+}
+
+.dark header h2 {
+  @apply text-white;
+}
+
+.dark header input {
+  @apply bg-secondary-700 border-secondary-600 text-white;
+}
+
+.dark header input::placeholder {
+  @apply text-secondary-400;
+}
+
+.dark header button {
+  @apply text-secondary-200 hover:bg-secondary-700;
+}
+
+.dark header button:hover {
+  @apply text-white;
+}
+
+/* Graphiques et données */
+.dark .chart-container {
+  @apply bg-secondary-800;
+}
+
+.dark .chart-title {
+  @apply text-white;
+}
+
+.dark .chart-subtitle {
+  @apply text-secondary-300;
+}
+
+.dark .chart-legend {
+  @apply text-secondary-200;
+}
+
+/* Tableaux et listes */
+.dark .table-caption {
+  @apply text-secondary-300;
+}
+
+.dark .table-header {
+  @apply text-secondary-200;
+}
+
+.dark .table-cell {
+  @apply text-secondary-100;
+}
+
+.dark .table-cell-muted {
+  @apply text-secondary-400;
+}
+
+/* Navigation et liens */
+.dark .nav-link {
+  @apply text-secondary-200 hover:text-white;
+}
+
+.dark .nav-link-active {
+  @apply text-white;
+}
+
+.dark .breadcrumb {
+  @apply text-secondary-400;
+}
+
+.dark .breadcrumb-active {
+  @apply text-white;
+}
+
+/* Messages et alertes */
+.dark .alert {
+  @apply bg-secondary-800 border-secondary-700;
+}
+
+.dark .alert-title {
+  @apply text-white;
+}
+
+.dark .alert-message {
+  @apply text-secondary-200;
+}
+
+.dark .alert-info {
+  @apply bg-primary-900 border-primary-700;
+}
+
+.dark .alert-success {
+  @apply bg-success-900 border-success-700;
+}
+
+.dark .alert-warning {
+  @apply bg-warning-900 border-warning-700;
+}
+
+.dark .alert-danger {
+  @apply bg-danger-900 border-danger-700;
+}
+
+/* Styles pour les classes utilitaires adaptatives en mode sombre */
+.dark .text-adaptive-primary {
+  @apply text-white;
+}
+
+.dark .text-adaptive-secondary {
+  @apply text-secondary-300;
+}
+
+.dark .text-adaptive-muted {
+  @apply text-secondary-400;
+}
+
+.dark .text-adaptive-subtle {
+  @apply text-secondary-500;
+}
+
+.dark .text-adaptive-label {
+  @apply text-secondary-200;
+}
+
+.dark .text-adaptive-help {
+  @apply text-secondary-400;
+}
+
+.dark .text-adaptive-error {
+  @apply text-danger-400;
+}
+
+.dark .text-adaptive-success {
+  @apply text-success-400;
+}
+
+.dark .text-adaptive-warning {
+  @apply text-warning-400;
+}
+
+.dark .text-adaptive-info {
+  @apply text-primary-400;
 }

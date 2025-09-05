@@ -9,13 +9,14 @@ export const studentsService = {
     return response.data;
   },
 
-  async getStudents({ page = 1, limit = 10, search = '', classId = '', gender = '' } = {}) {
+  async getStudents({ page = 1, limit = 10, search = '', classId = '', gender = '', schoolingType = '' } = {}) {
     const params = new URLSearchParams();
     params.set('page', String(page));
     params.set('limit', String(limit));
     if (search) params.set('search', search);
     if (classId) params.set('class', classId);
     if (gender) params.set('gender', gender);
+    if (schoolingType) params.set('schoolingType', schoolingType);
     const response = await api.get(`/students?${params.toString()}`);
     return response.data;
   },
@@ -42,6 +43,18 @@ export const studentsService = {
 
   async getDashboardStats() {
     const response = await api.get('/students/stats');
+    return response.data;
+  },
+
+  async updateStudent(studentId, formData) {
+    const response = await api.put(`/students/${studentId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  async deleteStudent(studentId) {
+    const response = await api.delete(`/students/${studentId}`);
     return response.data;
   }
 };

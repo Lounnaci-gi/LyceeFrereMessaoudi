@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -21,7 +21,14 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    // Charger le thème depuis localStorage ou détecter la préférence système
+    const savedTheme = localStorage.getItem('darkMode');
+    if (savedTheme !== null) {
+      return JSON.parse(savedTheme);
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -78,6 +85,12 @@ const Layout = () => {
       icon: Settings,
       roles: ['admin'],
     },
+    {
+      name: 'عرض الألوان',
+      path: '/theme-demo',
+      icon: Sun,
+      roles: ['admin', 'teacher'],
+    },
   ];
 
   // Dériver le code et l'affichage du rôle
@@ -89,14 +102,33 @@ const Layout = () => {
     item.roles.includes(roleCode)
   );
 
+  // Appliquer le thème au chargement de la page
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    
+    // Sauvegarder dans localStorage
+    localStorage.setItem('darkMode', JSON.stringify(newDarkMode));
+    
+    // Appliquer la classe dark au document
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   };
 
   return (

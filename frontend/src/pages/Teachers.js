@@ -4,9 +4,12 @@ import { UserCheck, Plus, Search, Filter, Download, X, Edit, Trash2, Eye } from 
 import { teachersService } from '../services/teachersService';
 import { studentsService } from '../services/studentsService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const Teachers = () => {
   const { isAuthenticated, loading } = useAuth();
+  const { showSuccess, showError, showConfirmDialog } = useNotification();
   const [showForm, setShowForm] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -19,6 +22,7 @@ const Teachers = () => {
   const [subjectFilter, setSubjectFilter] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, teacherId: null });
 
   useEffect(() => {
     if (loading || !isAuthenticated) return;
@@ -88,9 +92,9 @@ const Teachers = () => {
           form.reset();
           setPreview(null);
           fetchTeachers(pagination.page);
-          alert('تم تحديث الأستاذ بنجاح');
+          showSuccess('تم تحديث الأستاذ بنجاح');
         } else {
-          alert(res.message || 'فشل تحديث الأستاذ');
+          showError(res.message || 'فشل تحديث الأستاذ');
         }
       } else {
         // Création
@@ -100,14 +104,14 @@ const Teachers = () => {
           form.reset();
           setPreview(null);
           fetchTeachers(1);
-          alert('تم إنشاء الأستاذ بنجاح');
+          showSuccess('تم إنشاء الأستاذ بنجاح');
         } else {
-          alert(res.message || 'فشل إنشاء الأستاذ');
+          showError(res.message || 'فشل إنشاء الأستاذ');
         }
       }
     } catch (err) {
       console.error(err);
-      alert(`خطأ في الخادم عند ${editingTeacher ? 'تحديث' : 'إنشاء'} الأستاذ`);
+      showError(`خطأ في الخادم عند ${editingTeacher ? 'تحديث' : 'إنشاء'} الأستاذ`);
     } finally {
       setSubmitting(false);
     }
@@ -123,20 +127,25 @@ const Teachers = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا الأستاذ؟')) {
-      try {
-        const res = await teachersService.deleteTeacher(id);
-        if (res.success) {
-          fetchTeachers(pagination.page);
-          alert('تم حذف الأستاذ بنجاح');
-        } else {
-          alert(res.message || 'فشل حذف الأستاذ');
-        }
-      } catch (err) {
-        console.error(err);
-        alert('خطأ في الخادم عند حذف الأستاذ');
+  const handleDelete = (id) => {
+    setConfirmDialog({
+      isOpen: true,
+      teacherId: id
+    });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const res = await teachersService.deleteTeacher(confirmDialog.teacherId);
+      if (res.success) {
+        showSuccess('تم حذف الأستاذ بنجاح');
+        fetchTeachers(pagination.page);
+      } else {
+        showError(res.message || 'فشل حذف الأستاذ');
       }
+    } catch (err) {
+      console.error(err);
+      showError('خطأ في الخادم عند حذف الأستاذ');
     }
   };
 
@@ -412,6 +421,18 @@ const Teachers = () => {
           <button className="btn-secondary" disabled={pagination.page >= pagination.pages} onClick={() => fetchTeachers(pagination.page + 1)}>التالي</button>
         </div>
       </div>
+
+      {/* Dialogue de confirmation pour la suppression */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, teacherId: null })}
+        onConfirm={confirmDelete}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من حذف هذا الأستاذ؟ لا يمكن التراجع عن هذا الإجراء."
+        type="error"
+        confirmText="حذف"
+        cancelText="إلغاء"
+      />
     </div>
   );
 };

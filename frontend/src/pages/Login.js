@@ -44,10 +44,10 @@ const Login = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
             <School className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-secondary-900 mb-2">
+          <h1 className="text-2xl font-bold text-adaptive-primary mb-2">
             نظام إدارة التلاميذ
           </h1>
-          <p className="text-secondary-600">
+          <p className="text-adaptive-secondary">
             ثانوية الإخوة مسعودي
           </p>
         </div>
@@ -146,7 +146,7 @@ const Login = () => {
 
           {/* Informations supplémentaires */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-secondary-600">
+            <p className="text-sm text-adaptive-help">
               في حالة نسيان كلمة المرور، يرجى الاتصال بمدير النظام
             </p>
           </div>
@@ -154,7 +154,7 @@ const Login = () => {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-sm text-secondary-500">
+          <p className="text-sm text-adaptive-muted">
             © 2024 ثانوية الإخوة مسعودي. جميع الحقوق محفوظة.
           </p>
         </div>

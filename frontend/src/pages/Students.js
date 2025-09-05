@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Plus, Search, Filter, Download, X } from 'lucide-react';
+import { Users, Plus, Search, Filter, Download, X, Edit, Trash2, Eye } from 'lucide-react';
 import { studentsService } from '../services/studentsService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const Students = () => {
   const { isAuthenticated, loading } = useAuth();
+  const { showSuccess, showError, showConfirmDialog } = useNotification();
   const [showForm, setShowForm] = useState(false);
   const [showClassForm, setShowClassForm] = useState(false);
   const [showSpecialtyForm, setShowSpecialtyForm] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submittingClass, setSubmittingClass] = useState(false);
   const [submittingSpecialty, setSubmittingSpecialty] = useState(false);
@@ -20,8 +24,10 @@ const Students = () => {
   const [search, setSearch] = useState('');
   const [classId, setClassId] = useState('');
   const [gender, setGender] = useState('');
+  const [schoolingType, setSchoolingType] = useState('');
   const [specialtySearch, setSpecialtySearch] = useState('');
   const [classSearch, setClassSearch] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, studentId: null });
 
   useEffect(() => {
     if (loading || !isAuthenticated) return;
@@ -43,7 +49,7 @@ const Students = () => {
 
   const fetchStudents = async (page = 1) => {
     try {
-      const res = await studentsService.getStudents({ page, limit: pagination.limit, search, classId, gender });
+      const res = await studentsService.getStudents({ page, limit: pagination.limit, search, classId, gender, schoolingType });
       if (res.success) {
         setStudents(res.data.students);
         setPagination(res.data.pagination);
@@ -57,7 +63,7 @@ const Students = () => {
     if (loading || !isAuthenticated) return;
     fetchStudents(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, isAuthenticated, search, classId, gender]);
+  }, [loading, isAuthenticated, search, classId, gender, schoolingType]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -65,19 +71,36 @@ const Students = () => {
     const formData = new FormData(form);
     try {
       setSubmitting(true);
-      const res = await studentsService.createStudent(formData);
-      if (res.success) {
-        setShowForm(false);
-        form.reset();
-        setPreview(null);
-        // TODO: refresh list later when list API is wired
-        alert('تم إنشاء التلميذ بنجاح');
+      let res;
+      if (editingStudent) {
+        // Modification
+        res = await studentsService.updateStudent(editingStudent._id, formData);
+        if (res.success) {
+          setShowForm(false);
+          setEditingStudent(null);
+          form.reset();
+          setPreview(null);
+          fetchStudents(pagination.page);
+          showSuccess('تم تحديث التلميذ بنجاح');
+        } else {
+          showError(res.message || 'فشل تحديث التلميذ');
+        }
       } else {
-        alert(res.message || 'فشل إنشاء التلميذ');
+        // Création
+        res = await studentsService.createStudent(formData);
+        if (res.success) {
+          setShowForm(false);
+          form.reset();
+          setPreview(null);
+          fetchStudents(pagination.page);
+          showSuccess('تم إنشاء التلميذ بنجاح');
+        } else {
+          showError(res.message || 'فشل إنشاء التلميذ');
+        }
       }
     } catch (err) {
       console.error(err);
-      alert('خطأ في الخادم عند إنشاء التلميذ');
+      showError('خطأ في الخادم عند حفظ التلميذ');
     } finally {
       setSubmitting(false);
     }
@@ -90,6 +113,47 @@ const Students = () => {
       setPreview(url);
     } else {
       setPreview(null);
+    }
+  };
+
+  // Fonctions de gestion des actions
+  const handleView = (student) => {
+    // TODO: Implémenter la vue détaillée de l'élève
+    alert(`عرض تفاصيل التلميذ: ${student.firstName} ${student.lastName}`);
+  };
+
+  const handleEdit = (student) => {
+    setEditingStudent(student);
+    setShowForm(true);
+    
+    // Afficher la photo si elle existe
+    if (student.photo) {
+      const photoUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/../uploads/students/${student.photo}`;
+      setPreview(photoUrl);
+    } else {
+      setPreview(null);
+    }
+  };
+
+  const handleDelete = (studentId) => {
+    setConfirmDialog({
+      isOpen: true,
+      studentId: studentId
+    });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const res = await studentsService.deleteStudent(confirmDialog.studentId);
+      if (res.success) {
+        showSuccess('تم حذف التلميذ بنجاح');
+        fetchStudents(pagination.page);
+      } else {
+        showError(res.message || 'فشل حذف التلميذ');
+      }
+    } catch (err) {
+      console.error(err);
+      showError('خطأ في الخادم عند حذف التلميذ');
     }
   };
 
@@ -114,13 +178,13 @@ const Students = () => {
         // Recharger la liste des classes
         const cls = await studentsService.listClasses();
         if (cls.success) setClasses(cls.data);
-        alert('تم إنشاء الفصل بنجاح');
+        showSuccess('تم إنشاء الفصل بنجاح');
       } else {
-        alert(res.message || 'فشل إنشاء الفصل');
+        showError(res.message || 'فشل إنشاء الفصل');
       }
     } catch (err) {
       console.error(err);
-      alert('خطأ في الخادم عند إنشاء الفصل');
+      showError('خطأ في الخادم عند إنشاء الفصل');
     } finally {
       setSubmittingClass(false);
     }
@@ -146,13 +210,13 @@ const Students = () => {
         // Recharger la liste des spécialités
         const spec = await studentsService.listSpecialties();
         if (spec.success) setSpecialties(spec.data);
-        alert('تم إنشاء التخصص بنجاح');
+        showSuccess('تم إنشاء التخصص بنجاح');
       } else {
-        alert(res.message || 'فشل إنشاء التخصص');
+        showError(res.message || 'فشل إنشاء التخصص');
       }
     } catch (err) {
       console.error(err);
-      alert('خطأ في الخادم عند إنشاء التخصص');
+      showError('خطأ في الخادم عند إنشاء التخصص');
     } finally {
       setSubmittingSpecialty(false);
     }
@@ -186,7 +250,11 @@ const Students = () => {
             <Plus className="w-5 h-5" />
             <span>إضافة فصل جديد</span>
           </button>
-          <button className="btn-primary flex items-center space-x-2 space-x-reverse" onClick={() => setShowForm(true)}>
+          <button className="btn-primary flex items-center space-x-2 space-x-reverse" onClick={() => {
+            setShowForm(true);
+            setEditingStudent(null);
+            setPreview(null);
+          }}>
             <Plus className="w-5 h-5" />
             <span>إضافة تلميذ جديد</span>
           </button>
@@ -196,42 +264,76 @@ const Students = () => {
       {showForm && (
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">إضافة تلميذ</h2>
-            <button className="text-secondary-600 hover:text-secondary-800" onClick={() => setShowForm(false)}>
+            <h2 className="text-lg font-semibold">{editingStudent ? 'تعديل التلميذ' : 'إضافة تلميذ'}</h2>
+            <button className="text-secondary-600 hover:text-secondary-800" onClick={() => {
+              setShowForm(false);
+              setEditingStudent(null);
+              setPreview(null);
+            }}>
               <X className="w-5 h-5" />
             </button>
           </div>
           <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={onSubmit}>
             <div>
               <label className="label">الاسم</label>
-              <input name="firstName" className="input-field" required />
+              <input 
+                name="firstName" 
+                className="input-field" 
+                defaultValue={editingStudent?.firstName || ''}
+                required 
+              />
             </div>
             <div>
               <label className="label">اللقب</label>
-              <input name="lastName" className="input-field" required />
+              <input 
+                name="lastName" 
+                className="input-field" 
+                defaultValue={editingStudent?.lastName || ''}
+                required 
+              />
             </div>
             <div>
               <label className="label">تاريخ الميلاد</label>
-              <input type="date" name="dateOfBirth" className="input-field" required />
+              <input 
+                type="date" 
+                name="dateOfBirth" 
+                className="input-field" 
+                defaultValue={editingStudent?.dateOfBirth ? new Date(editingStudent.dateOfBirth).toISOString().split('T')[0] : ''}
+                required 
+              />
             </div>
             <div>
               <label className="label">الجنس</label>
-              <select name="gender" className="input-field" required>
+              <select name="gender" className="input-field" defaultValue={editingStudent?.gender || ''} required>
+                <option value="">اختر الجنس</option>
                 <option value="male">ذكر</option>
                 <option value="female">أنثى</option>
               </select>
             </div>
             <div>
               <label className="label">البريد الإلكتروني (اختياري)</label>
-              <input type="email" name="email" className="input-field" />
+              <input 
+                type="email" 
+                name="email" 
+                className="input-field" 
+                defaultValue={editingStudent?.email || ''}
+              />
             </div>
             <div>
               <label className="label">الفصل</label>
-              <select name="class" className="input-field" required>
+              <select name="class" className="input-field" defaultValue={editingStudent?.class?._id || ''} required>
                 <option value="">اختر الفصل</option>
                 {classes.map((c) => (
                   <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">نوع التمدرس</label>
+              <select name="schoolingType" className="input-field" defaultValue={editingStudent?.schoolingType || ''} required>
+                <option value="">اختر نوع التمدرس</option>
+                <option value="externe">خارجي</option>
+                <option value="demi-pensionnaire">نصف داخلي</option>
               </select>
             </div>
             <div>
@@ -242,8 +344,14 @@ const Students = () => {
               )}
             </div>
             <div className="md:col-span-2 flex justify-end gap-2 mt-2">
-              <button type="button" className="btn-secondary" onClick={() => setShowForm(false)} disabled={submitting}>إلغاء</button>
-              <button type="submit" className="btn-primary" disabled={submitting}>{submitting ? 'جارٍ الحفظ...' : 'حفظ'}</button>
+              <button type="button" className="btn-secondary" onClick={() => {
+                setShowForm(false);
+                setEditingStudent(null);
+                setPreview(null);
+              }} disabled={submitting}>إلغاء</button>
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? 'جارٍ الحفظ...' : (editingStudent ? 'تحديث' : 'حفظ')}
+              </button>
             </div>
           </form>
         </div>
@@ -426,6 +534,11 @@ const Students = () => {
               <option value="male">ذكر</option>
               <option value="female">أنثى</option>
             </select>
+            <select className="input-field" value={schoolingType} onChange={(e) => setSchoolingType(e.target.value)}>
+              <option value="">نوع التمدرس</option>
+              <option value="externe">خارجي</option>
+              <option value="demi-pensionnaire">نصف داخلي</option>
+            </select>
             <button className="btn-secondary flex items-center">
               <Filter className="w-4 h-4" />
             </button>
@@ -444,6 +557,7 @@ const Students = () => {
                 <th>الاسم الكامل</th>
                 <th>الفصل</th>
                 <th>الجنس</th>
+                <th>نوع التمدرس</th>
                 <th>الحالة</th>
                 <th>الإجراءات</th>
               </tr>
@@ -469,14 +583,49 @@ const Students = () => {
                     </span>
                   </td>
                   <td>
+                    <span className={`badge ${
+                      s.schoolingType === 'externe' 
+                        ? 'badge-info' 
+                        : s.schoolingType === 'demi-pensionnaire' 
+                        ? 'badge-warning' 
+                        : 'badge-secondary'
+                    }`}>
+                      {s.schoolingType === 'externe' 
+                        ? 'خارجي' 
+                        : s.schoolingType === 'demi-pensionnaire' 
+                        ? 'نصف داخلي' 
+                        : 'غير محدد'
+                      }
+                    </span>
+                  </td>
+                  <td>
                     <span className={`badge ${s.isActive ? 'badge-success' : 'badge-danger'}`}>
                       {s.isActive ? 'نشط' : 'غير نشط'}
                     </span>
                   </td>
                   <td>
                     <div className="flex space-x-2 space-x-reverse">
-                      <button className="text-primary-600 hover:text-primary-700">عرض</button>
-                      <button className="text-secondary-600 hover:text-secondary-700">تعديل</button>
+                      <button 
+                        className="text-primary-600 hover:text-primary-700" 
+                        title="عرض" 
+                        onClick={() => handleView(s)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button 
+                        className="text-secondary-600 hover:text-secondary-700" 
+                        title="تعديل" 
+                        onClick={() => handleEdit(s)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button 
+                        className="text-red-600 hover:text-red-700" 
+                        title="حذف" 
+                        onClick={() => handleDelete(s._id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -500,6 +649,18 @@ const Students = () => {
           <button className="btn-secondary" disabled={pagination.page >= pagination.pages} onClick={() => fetchStudents(pagination.page + 1)}>التالي</button>
         </div>
       </div>
+
+      {/* Dialogue de confirmation pour la suppression */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, studentId: null })}
+        onConfirm={confirmDelete}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من حذف هذا التلميذ؟ لا يمكن التراجع عن هذا الإجراء."
+        type="error"
+        confirmText="حذف"
+        cancelText="إلغاء"
+      />
     </div>
   );
 };

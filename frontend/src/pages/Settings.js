@@ -5,8 +5,8 @@ const Settings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-secondary-900">الإعدادات</h1>
-        <p className="text-secondary-600">إدارة إعدادات النظام والحساب</p>
+        <h1 className="text-2xl font-bold text-adaptive-primary">الإعدادات</h1>
+        <p className="text-adaptive-secondary">إدارة إعدادات النظام والحساب</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -19,13 +19,13 @@ const Settings = () => {
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
+              <label className="block text-sm font-medium text-adaptive-label mb-2">
                 اسم المستخدم
               </label>
               <input type="text" className="input-field" value="admin" readOnly />
             </div>
             <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
+              <label className="block text-sm font-medium text-adaptive-label mb-2">
                 البريد الإلكتروني
               </label>
               <input type="email" className="input-field" value="admin@lycee.com" />

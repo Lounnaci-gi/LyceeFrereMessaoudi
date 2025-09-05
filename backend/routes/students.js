@@ -15,6 +15,7 @@ router.get('/', auth, async (req, res) => {
     const classFilter = req.query.class;
     const specialtyFilter = req.query.specialty;
     const genderFilter = req.query.gender;
+    const schoolingTypeFilter = req.query.schoolingType;
 
     // Construction du filtre
     let filter = { isActive: true };
@@ -34,6 +35,10 @@ router.get('/', auth, async (req, res) => {
 
     if (genderFilter) {
       filter.gender = genderFilter;
+    }
+
+    if (schoolingTypeFilter) {
+      filter.schoolingType = schoolingTypeFilter;
     }
 
     // Requête avec population des relations
@@ -179,7 +184,8 @@ router.post('/', [
   body('dateOfBirth').isISO8601().withMessage('Date de naissance invalide'),
   body('gender').isIn(['male', 'female']).withMessage('Genre invalide'),
   body('class').isMongoId().withMessage('Classe invalide'),
-  body('email').optional().isEmail().withMessage('Email invalide')
+  body('email').optional().isEmail().withMessage('Email invalide'),
+  body('schoolingType').isIn(['externe', 'demi-pensionnaire']).withMessage('Type de scolarité invalide')
 ], async (req, res) => {
   try {
     // Validation des données
@@ -277,7 +283,8 @@ router.put('/:id', [
   body('lastName').optional().notEmpty().withMessage('Le nom de famille ne peut pas être vide'),
   body('dateOfBirth').optional().isISO8601().withMessage('Date de naissance invalide'),
   body('gender').optional().isIn(['male', 'female']).withMessage('Genre invalide'),
-  body('email').optional().isEmail().withMessage('Email invalide')
+  body('email').optional().isEmail().withMessage('Email invalide'),
+  body('schoolingType').optional().isIn(['externe', 'demi-pensionnaire']).withMessage('Type de scolarité invalide')
 ], async (req, res) => {
   try {
     // Validation des données

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -10,6 +11,7 @@ import Absences from './pages/Absences';
 import Incidents from './pages/Incidents';
 import Discipline from './pages/Discipline';
 import Settings from './pages/Settings';
+import ThemeDemo from './components/ThemeDemo';
 
 // Composant pour protéger les routes
 const ProtectedRoute = ({ children }) => {
@@ -54,6 +56,7 @@ const AppContent = () => {
         <Route path="incidents" element={<Incidents />} />
         <Route path="discipline" element={<Discipline />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="theme-demo" element={<ThemeDemo />} />
       </Route>
 
       {/* Route 404 */}
@@ -62,11 +65,13 @@ const AppContent = () => {
   );
 };
 
-// Composant racine avec le contexte d'authentification
+// Composant racine avec les contextes
 const App = () => {
   return (
     <AuthProvider>
-      <AppContent />
+      <NotificationProvider>
+        <AppContent />
+      </NotificationProvider>
     </AuthProvider>
   );
 };

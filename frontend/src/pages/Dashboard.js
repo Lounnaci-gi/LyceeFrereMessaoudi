@@ -178,8 +178,8 @@ const Dashboard = () => {
     <div className="space-y-6">
       {/* Titre de la page */}
       <div>
-        <h1 className="text-2xl font-bold text-secondary-900">لوحة التحكم</h1>
-        <p className="text-secondary-600">مرحباً بك في نظام إدارة التلاميذ</p>
+        <h1 className="text-2xl font-bold text-adaptive-primary">لوحة التحكم</h1>
+        <p className="text-adaptive-secondary">مرحباً بك في نظام إدارة التلاميذ</p>
       </div>
 
       {/* Cartes de statistiques */}
@@ -196,8 +196,8 @@ const Dashboard = () => {
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-secondary-600">{card.title}</p>
-                  <p className="text-2xl font-bold text-secondary-900">{card.value}</p>
+                  <p className="text-sm font-medium text-adaptive-secondary">{card.title}</p>
+                  <p className="text-2xl font-bold text-adaptive-primary">{card.value}</p>
                   <div className="flex items-center mt-2">
                     {card.changeType === 'increase' ? (
                       <TrendingUp className="w-4 h-4 text-success-600" />
