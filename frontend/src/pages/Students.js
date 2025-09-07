@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Plus, Search, Filter, Download, X, Edit, Trash2, Eye } from 'lucide-react';
 import { studentsService } from '../services/studentsService';
+import { parentsService } from '../services/parentsService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -28,6 +29,38 @@ const Students = () => {
   const [specialtySearch, setSpecialtySearch] = useState('');
   const [classSearch, setClassSearch] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, studentId: null });
+  const formRef = useRef(null);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    gender: '',
+    email: '',
+    class: '',
+    schoolingType: '',
+    parents: {
+      father: {
+        firstName: '',
+        lastName: '',
+        profession: '',
+        phone: '',
+        email: ''
+      },
+      mother: {
+        firstName: '',
+        lastName: '',
+        profession: '',
+        phone: '',
+        email: ''
+      },
+      familySituation: '',
+      financialSituation: '',
+      childrenCount: {
+        boys: 0,
+        girls: 0
+      }
+    }
+  });
 
   useEffect(() => {
     if (loading || !isAuthenticated) return;
@@ -49,10 +82,15 @@ const Students = () => {
 
   const fetchStudents = async (page = 1) => {
     try {
+      console.log('Fetching students...', { page, limit: pagination.limit, search, classId, gender, schoolingType });
       const res = await studentsService.getStudents({ page, limit: pagination.limit, search, classId, gender, schoolingType });
+      console.log('Students response:', res);
       if (res.success) {
         setStudents(res.data.students);
         setPagination(res.data.pagination);
+        console.log('Students loaded:', res.data.students.length);
+      } else {
+        console.error('Failed to load students:', res.message);
       }
     } catch (e) {
       console.error('Erreur chargement élèves:', e);
@@ -68,13 +106,92 @@ const Students = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
-    const formData = new FormData(form);
+    const submitFormData = new FormData(form);
+    
     try {
       setSubmitting(true);
+      
+      // Vérifier s'il y a des données parents à sauvegarder
+      const hasFatherData = formData.parents?.father?.firstName?.trim() || formData.parents?.father?.lastName?.trim();
+      const hasMotherData = formData.parents?.mother?.firstName?.trim() || formData.parents?.mother?.lastName?.trim();
+      
+      let parentsArray = [];
+      
+      // Créer le père si on a des données complètes
+      if (hasFatherData && formData.parents?.father?.firstName?.trim() && formData.parents?.father?.lastName?.trim()) {
+        const fatherData = {
+          firstName: formData.parents.father.firstName.trim(),
+          lastName: formData.parents.father.lastName.trim(),
+          email: formData.parents.father.email?.trim() || `father_${Date.now()}@temp.com`,
+          phone: formData.parents.father.phone?.trim() || '00000000',
+          relationship: 'father',
+          address: {
+            street: '',
+            city: '',
+            postalCode: '',
+            country: ''
+          }
+        };
+        
+        console.log('Creating father:', fatherData);
+        
+        try {
+          const fatherRes = await parentsService.createParent(fatherData);
+          if (fatherRes.success) {
+            parentsArray.push({
+              parent: fatherRes.data._id,
+              relationship: 'father'
+            });
+          }
+        } catch (err) {
+          console.error('Erreur création père:', err);
+          // Ne pas bloquer la création de l'élève si le parent échoue
+        }
+      }
+      
+      // Créer la mère si on a des données complètes
+      if (hasMotherData && formData.parents?.mother?.firstName?.trim() && formData.parents?.mother?.lastName?.trim()) {
+        const motherData = {
+          firstName: formData.parents.mother.firstName.trim(),
+          lastName: formData.parents.mother.lastName.trim(),
+          email: formData.parents.mother.email?.trim() || `mother_${Date.now()}@temp.com`,
+          phone: formData.parents.mother.phone?.trim() || '00000000',
+          relationship: 'mother',
+          address: {
+            street: '',
+            city: '',
+            postalCode: '',
+            country: ''
+          }
+        };
+        
+        console.log('Creating mother:', motherData);
+        
+        try {
+          const motherRes = await parentsService.createParent(motherData);
+          if (motherRes.success) {
+            parentsArray.push({
+              parent: motherRes.data._id,
+              relationship: 'mother'
+            });
+          }
+        } catch (err) {
+          console.error('Erreur création mère:', err);
+          // Ne pas bloquer la création de l'élève si le parent échoue
+        }
+      }
+      
+      // Ajouter les parents au FormData de l'élève
+      if (parentsArray.length > 0) {
+        submitFormData.append('parents', JSON.stringify(parentsArray));
+      }
+      
+      console.log('FormData being sent:', Object.fromEntries(submitFormData.entries()));
+      
       let res;
       if (editingStudent) {
         // Modification
-        res = await studentsService.updateStudent(editingStudent._id, formData);
+        res = await studentsService.updateStudent(editingStudent._id, submitFormData);
         if (res.success) {
           setShowForm(false);
           setEditingStudent(null);
@@ -87,7 +204,7 @@ const Students = () => {
         }
       } else {
         // Création
-        res = await studentsService.createStudent(formData);
+        res = await studentsService.createStudent(submitFormData);
         if (res.success) {
           setShowForm(false);
           form.reset();
@@ -99,8 +216,18 @@ const Students = () => {
         }
       }
     } catch (err) {
-      console.error(err);
-      showError('خطأ في الخادم عند حفظ التلميذ');
+      console.error('Erreur complète:', err);
+      let errorMessage = 'خطأ في الخادم عند حفظ التلميذ';
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.errors) {
+        errorMessage = err.response.data.errors.map(e => e.msg).join(', ');
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      showError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -122,9 +249,61 @@ const Students = () => {
     alert(`عرض تفاصيل التلميذ: ${student.firstName} ${student.lastName}`);
   };
 
-  const handleEdit = (student) => {
+  const handleEdit = async (student) => {
     setEditingStudent(student);
     setShowForm(true);
+    
+    // Charger les données parents depuis le tableau parents
+    let parentsData = {
+      father: { firstName: '', lastName: '', profession: '', phone: '', email: '' },
+      mother: { firstName: '', lastName: '', profession: '', phone: '', email: '' },
+      familySituation: '',
+      financialSituation: '',
+      childrenCount: { boys: 0, girls: 0 }
+    };
+    
+    if (student.parents && student.parents.length > 0) {
+      try {
+        // Charger les données de chaque parent
+        for (const parentRef of student.parents) {
+          const parentRes = await parentsService.getParent(parentRef.parent);
+          if (parentRes.success) {
+            const parent = parentRes.data;
+            if (parentRef.relationship === 'father') {
+              parentsData.father = {
+                firstName: parent.firstName || '',
+                lastName: parent.lastName || '',
+                profession: parent.profession || '',
+                phone: parent.phone || '',
+                email: parent.email || ''
+              };
+            } else if (parentRef.relationship === 'mother') {
+              parentsData.mother = {
+                firstName: parent.firstName || '',
+                lastName: parent.lastName || '',
+                profession: parent.profession || '',
+                phone: parent.phone || '',
+                email: parent.email || ''
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erreur chargement parents:', err);
+      }
+    }
+    
+    // Mettre à jour les données du formulaire
+    setFormData({
+      firstName: student.firstName || '',
+      lastName: student.lastName || '',
+      dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split('T')[0] : '',
+      gender: student.gender || '',
+      email: student.email || '',
+      class: student.class?._id || '',
+      schoolingType: student.schoolingType || '',
+      parents: parentsData
+    });
     
     // Afficher la photo si elle existe
     if (student.photo) {
@@ -133,6 +312,17 @@ const Students = () => {
     } else {
       setPreview(null);
     }
+
+    // Focus smooth sur le formulaire après un court délai pour permettre le rendu
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
   };
 
   const handleDelete = (studentId) => {
@@ -254,6 +444,37 @@ const Students = () => {
             setShowForm(true);
             setEditingStudent(null);
             setPreview(null);
+            setFormData({
+              firstName: '',
+              lastName: '',
+              dateOfBirth: '',
+              gender: '',
+              email: '',
+              class: '',
+              schoolingType: '',
+              parents: {
+                father: {
+                  firstName: '',
+                  lastName: '',
+                  profession: '',
+                  phone: '',
+                  email: ''
+                },
+                mother: {
+                  firstName: '',
+                  lastName: '',
+                  profession: '',
+                  phone: '',
+                  email: ''
+                },
+                familySituation: '',
+                financialSituation: '',
+                childrenCount: {
+                  boys: 0,
+                  girls: 0
+                }
+              }
+            });
           }}>
             <Plus className="w-5 h-5" />
             <span>إضافة تلميذ جديد</span>
@@ -262,13 +483,44 @@ const Students = () => {
       </div>
 
       {showForm && (
-        <div className="card">
+        <div className="card" ref={formRef}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">{editingStudent ? 'تعديل التلميذ' : 'إضافة تلميذ'}</h2>
             <button className="text-secondary-600 hover:text-secondary-800" onClick={() => {
               setShowForm(false);
               setEditingStudent(null);
               setPreview(null);
+              setFormData({
+                firstName: '',
+                lastName: '',
+                dateOfBirth: '',
+                gender: '',
+                email: '',
+                class: '',
+                schoolingType: '',
+                parents: {
+                  father: {
+                    firstName: '',
+                    lastName: '',
+                    profession: '',
+                    phone: '',
+                    email: ''
+                  },
+                  mother: {
+                    firstName: '',
+                    lastName: '',
+                    profession: '',
+                    phone: '',
+                    email: ''
+                  },
+                  familySituation: '',
+                  financialSituation: '',
+                  childrenCount: {
+                    boys: 0,
+                    girls: 0
+                  }
+                }
+              });
             }}>
               <X className="w-5 h-5" />
             </button>
@@ -279,7 +531,8 @@ const Students = () => {
               <input 
                 name="firstName" 
                 className="input-field" 
-                defaultValue={editingStudent?.firstName || ''}
+                value={formData.firstName}
+                onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                 required 
               />
             </div>
@@ -288,7 +541,8 @@ const Students = () => {
               <input 
                 name="lastName" 
                 className="input-field" 
-                defaultValue={editingStudent?.lastName || ''}
+                value={formData.lastName}
+                onChange={(e) => setFormData({...formData, lastName: e.target.value})}
                 required 
               />
             </div>
@@ -298,13 +552,20 @@ const Students = () => {
                 type="date" 
                 name="dateOfBirth" 
                 className="input-field" 
-                defaultValue={editingStudent?.dateOfBirth ? new Date(editingStudent.dateOfBirth).toISOString().split('T')[0] : ''}
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
                 required 
               />
             </div>
             <div>
               <label className="label">الجنس</label>
-              <select name="gender" className="input-field" defaultValue={editingStudent?.gender || ''} required>
+              <select 
+                name="gender" 
+                className="input-field" 
+                value={formData.gender}
+                onChange={(e) => setFormData({...formData, gender: e.target.value})}
+                required
+              >
                 <option value="">اختر الجنس</option>
                 <option value="male">ذكر</option>
                 <option value="female">أنثى</option>
@@ -316,12 +577,19 @@ const Students = () => {
                 type="email" 
                 name="email" 
                 className="input-field" 
-                defaultValue={editingStudent?.email || ''}
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
               />
             </div>
             <div>
               <label className="label">الفصل</label>
-              <select name="class" className="input-field" defaultValue={editingStudent?.class?._id || ''} required>
+              <select 
+                name="class" 
+                className="input-field" 
+                value={formData.class}
+                onChange={(e) => setFormData({...formData, class: e.target.value})}
+                required
+              >
                 <option value="">اختر الفصل</option>
                 {classes.map((c) => (
                   <option key={c._id} value={c._id}>{c.name}</option>
@@ -330,7 +598,13 @@ const Students = () => {
             </div>
             <div>
               <label className="label">نوع التمدرس</label>
-              <select name="schoolingType" className="input-field" defaultValue={editingStudent?.schoolingType || ''} required>
+              <select 
+                name="schoolingType" 
+                className="input-field" 
+                value={formData.schoolingType}
+                onChange={(e) => setFormData({...formData, schoolingType: e.target.value})}
+                required
+              >
                 <option value="">اختر نوع التمدرس</option>
                 <option value="externe">خارجي</option>
                 <option value="demi-pensionnaire">نصف داخلي</option>
@@ -343,15 +617,301 @@ const Students = () => {
                 <img src={preview} alt="preview" className="mt-2 h-20 w-20 object-cover rounded" />
               )}
             </div>
-            <div className="md:col-span-2 flex justify-end gap-2 mt-2">
+
+            {/* Section Informations Parents */}
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-secondary-800 mb-4 border-b border-secondary-200 pb-2">
+                معلومات الوالدين
+              </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Informations Père */}
+              <div className="space-y-4">
+                <h4 className="text-md font-medium text-secondary-700">معلومات الأب</h4>
+                <div>
+                  <label className="label">اسم الأب</label>
+                  <input 
+                    name="parents.father.firstName" 
+                    className="input-field" 
+                    value={formData.parents.father.firstName}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        father: {...formData.parents.father, firstName: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="label">لقب الأب</label>
+                  <input 
+                    name="parents.father.lastName" 
+                    className="input-field" 
+                    value={formData.parents.father.lastName}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        father: {...formData.parents.father, lastName: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="label">مهنة الأب</label>
+                  <input 
+                    name="parents.father.profession" 
+                    className="input-field" 
+                    value={formData.parents.father.profession}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        father: {...formData.parents.father, profession: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="label">هاتف الأب</label>
+                  <input 
+                    type="tel" 
+                    name="parents.father.phone" 
+                    className="input-field" 
+                    value={formData.parents.father.phone}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        father: {...formData.parents.father, phone: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="label">بريد الأب الإلكتروني</label>
+                  <input 
+                    type="email" 
+                    name="parents.father.email" 
+                    className="input-field" 
+                    value={formData.parents.father.email}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        father: {...formData.parents.father, email: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+
+              {/* Informations Mère */}
+              <div className="space-y-4">
+                <h4 className="text-md font-medium text-secondary-700">معلومات الأم</h4>
+                <div>
+                  <label className="label">اسم الأم</label>
+                  <input 
+                    name="parents.mother.firstName" 
+                    className="input-field" 
+                    value={formData.parents.mother.firstName}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        mother: {...formData.parents.mother, firstName: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="label">لقب الأم</label>
+                  <input 
+                    name="parents.mother.lastName" 
+                    className="input-field" 
+                    value={formData.parents.mother.lastName}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        mother: {...formData.parents.mother, lastName: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="label">مهنة الأم</label>
+                  <input 
+                    name="parents.mother.profession" 
+                    className="input-field" 
+                    value={formData.parents.mother.profession}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        mother: {...formData.parents.mother, profession: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="label">هاتف الأم</label>
+                  <input 
+                    type="tel" 
+                    name="parents.mother.phone" 
+                    className="input-field" 
+                    value={formData.parents.mother.phone}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        mother: {...formData.parents.mother, phone: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="label">بريد الأم الإلكتروني</label>
+                  <input 
+                    type="email" 
+                    name="parents.mother.email" 
+                    className="input-field" 
+                    value={formData.parents.mother.email}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        mother: {...formData.parents.mother, email: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Informations Familiales */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">الوضع العائلي</label>
+                <select 
+                  name="parents.familySituation" 
+                  className="input-field" 
+                  value={formData.parents.familySituation}
+                  onChange={(e) => setFormData({
+                    ...formData, 
+                    parents: {...formData.parents, familySituation: e.target.value}
+                  })}
+                >
+                  <option value="">اختر الوضع العائلي</option>
+                  <option value="married">متزوج</option>
+                  <option value="divorced">مطلق</option>
+                  <option value="father_deceased">الأب متوفى</option>
+                  <option value="mother_deceased">الأم متوفية</option>
+                  <option value="both_deceased">كلاهما متوفى</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">الوضع المالي</label>
+                <select 
+                  name="parents.financialSituation" 
+                  className="input-field" 
+                  value={formData.parents.financialSituation}
+                  onChange={(e) => setFormData({
+                    ...formData, 
+                    parents: {...formData.parents, financialSituation: e.target.value}
+                  })}
+                >
+                  <option value="">اختر الوضع المالي</option>
+                  <option value="stable">مستقر</option>
+                  <option value="precarious">هش</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Nombre d'enfants */}
+            <div className="mt-4">
+              <h4 className="text-md font-medium text-secondary-700 mb-3">عدد الأطفال</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">عدد الأولاد</label>
+                  <input 
+                    type="number" 
+                    name="parents.childrenCount.boys" 
+                    className="input-field" 
+                    min="0"
+                    value={formData.parents.childrenCount.boys}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        childrenCount: {...formData.parents.childrenCount, boys: parseInt(e.target.value) || 0}
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="label">عدد البنات</label>
+                  <input 
+                    type="number" 
+                    name="parents.childrenCount.girls" 
+                    className="input-field" 
+                    min="0"
+                    value={formData.parents.childrenCount.girls}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      parents: {
+                        ...formData.parents,
+                        childrenCount: {...formData.parents.childrenCount, girls: parseInt(e.target.value) || 0}
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
+            </div>
+
+            <div className="mt-6">
+              <div className="md:col-span-2 flex justify-end gap-2 mt-2">
               <button type="button" className="btn-secondary" onClick={() => {
                 setShowForm(false);
                 setEditingStudent(null);
                 setPreview(null);
+                setFormData({
+                  firstName: '',
+                  lastName: '',
+                  dateOfBirth: '',
+                  gender: '',
+                  email: '',
+                  class: '',
+                  schoolingType: '',
+                  parents: {
+                    father: {
+                      firstName: '',
+                      lastName: '',
+                      profession: '',
+                      phone: '',
+                      email: ''
+                    },
+                    mother: {
+                      firstName: '',
+                      lastName: '',
+                      profession: '',
+                      phone: '',
+                      email: ''
+                    },
+                    familySituation: '',
+                    financialSituation: '',
+                    childrenCount: {
+                      boys: 0,
+                      girls: 0
+                    }
+                  }
+                });
               }} disabled={submitting}>إلغاء</button>
               <button type="submit" className="btn-primary" disabled={submitting}>
                 {submitting ? 'جارٍ الحفظ...' : (editingStudent ? 'تحديث' : 'حفظ')}
               </button>
+              </div>
             </div>
           </form>
         </div>
@@ -549,21 +1109,27 @@ const Students = () => {
       {/* Tableau des élèves */}
       <div className="card">
         <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>الصورة</th>
-                <th>رقم التسجيل</th>
-                <th>الاسم الكامل</th>
-                <th>الفصل</th>
-                <th>الجنس</th>
-                <th>نوع التمدرس</th>
-                <th>الحالة</th>
-                <th>الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((s) => (
+          {students.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-secondary-500">لا توجد تلاميذ</p>
+              <p className="text-sm text-secondary-400 mt-2">عدد التلاميذ: {students.length}</p>
+            </div>
+          ) : (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>الصورة</th>
+                  <th>رقم التسجيل</th>
+                  <th>الاسم الكامل</th>
+                  <th>الفصل</th>
+                  <th>الجنس</th>
+                  <th>نوع التمدرس</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((s) => (
                 <tr key={s._id}>
                   <td>
                     {s.photo ? (
@@ -629,9 +1195,10 @@ const Students = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 

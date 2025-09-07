@@ -127,7 +127,7 @@ const classSchema = new mongoose.Schema({
   }
 });
 
-// Schéma pour les parents
+// Schéma pour les parents (ancien modèle pour compatibilité)
 const parentSchema = new mongoose.Schema({
   firstName: {
     type: String,
@@ -141,13 +141,14 @@ const parentSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: true,
+    required: false,
     unique: true,
+    sparse: true,
     lowercase: true
   },
   phone: {
     type: String,
-    required: true
+    required: false
   },
   address: {
     street: String,
@@ -163,6 +164,106 @@ const parentSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// Nouveau schéma pour les informations parents (père + mère ensemble)
+const parentInfoSchema = new mongoose.Schema({
+  father: {
+    firstName: {
+      type: String,
+      required: false,
+      trim: true,
+      default: ''
+    },
+    lastName: {
+      type: String,
+      required: false,
+      trim: true,
+      default: ''
+    },
+    profession: {
+      type: String,
+      required: false,
+      trim: true,
+      default: ''
+    },
+    phone: {
+      type: String,
+      required: false,
+      trim: true,
+      default: ''
+    },
+    email: {
+      type: String,
+      required: false,
+      lowercase: true,
+      default: ''
+    }
+  },
+  mother: {
+    firstName: {
+      type: String,
+      required: false,
+      trim: true,
+      default: ''
+    },
+    lastName: {
+      type: String,
+      required: false,
+      trim: true,
+      default: ''
+    },
+    profession: {
+      type: String,
+      required: false,
+      trim: true,
+      default: ''
+    },
+    phone: {
+      type: String,
+      required: false,
+      trim: true,
+      default: ''
+    },
+    email: {
+      type: String,
+      required: false,
+      lowercase: true,
+      default: ''
+    }
+  },
+  familySituation: {
+    type: String,
+    enum: ['married', 'divorced', 'father_deceased', 'mother_deceased', 'both_deceased'],
+    required: false,
+    default: ''
+  },
+  financialSituation: {
+    type: String,
+    enum: ['stable', 'precarious'],
+    required: false,
+    default: ''
+  },
+  childrenCount: {
+    boys: {
+      type: Number,
+      required: false,
+      default: 0
+    },
+    girls: {
+      type: Number,
+      required: false,
+      default: 0
+    }
   },
   createdAt: {
     type: Date,
@@ -549,6 +650,7 @@ const User = mongoose.model('User', userSchema);
 const Specialty = mongoose.model('Specialty', specialtySchema);
 const Class = mongoose.model('Class', classSchema);
 const Parent = mongoose.model('Parent', parentSchema);
+const ParentInfo = mongoose.model('ParentInfo', parentInfoSchema);
 const Student = mongoose.model('Student', studentSchema);
 const Teacher = mongoose.model('Teacher', teacherSchema);
 const Subject = mongoose.model('Subject', subjectSchema);
@@ -563,6 +665,7 @@ module.exports = {
   Specialty,
   Class,
   Parent,
+  ParentInfo,
   Student,
   Teacher,
   Subject,

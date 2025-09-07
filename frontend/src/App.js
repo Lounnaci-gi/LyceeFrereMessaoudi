@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Students from './pages/Students';
 import Teachers from './pages/Teachers';
+import Parents from './pages/Parents';
 import Absences from './pages/Absences';
 import Incidents from './pages/Incidents';
 import Discipline from './pages/Discipline';
@@ -52,6 +53,7 @@ const AppContent = () => {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="students" element={<Students />} />
         <Route path="teachers" element={<Teachers />} />
+        <Route path="parents" element={<Parents />} />
         <Route path="absences" element={<Absences />} />
         <Route path="incidents" element={<Incidents />} />
         <Route path="discipline" element={<Discipline />} />

@@ -14,6 +14,7 @@ const studentsRoutes = require('./routes/students');
 const classesRoutes = require('./routes/classes');
 const specialtiesRoutes = require('./routes/specialties');
 const teachersRoutes = require('./routes/teachers');
+const parentsRoutes = require('./routes/parents');
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use('/api/students', studentsRoutes);
 app.use('/api/classes', classesRoutes);
 app.use('/api/specialties', specialtiesRoutes);
 app.use('/api/teachers', teachersRoutes);
+app.use('/api/parents', parentsRoutes);
 
 // Middleware de gestion des erreurs global
 app.use((err, req, res, next) => {

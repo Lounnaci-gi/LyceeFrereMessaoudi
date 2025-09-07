@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { UserCheck, Plus, Search, Filter, Download, X, Edit, Trash2, Eye } from 'lucide-react';
 import { teachersService } from '../services/teachersService';
@@ -23,6 +23,18 @@ const Teachers = () => {
   const [classFilter, setClassFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, teacherId: null });
+  const formRef = useRef(null);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    email: '',
+    phone: '',
+    address: {
+      street: '',
+      city: ''
+    },
+    subjects: [],
+    classes: []
+  });
 
   useEffect(() => {
     if (loading || !isAuthenticated) return;
@@ -152,10 +164,37 @@ const Teachers = () => {
   const handleEdit = (teacher) => {
     setEditingTeacher(teacher);
     setShowForm(true);
+    
+    // Mettre à jour les données du formulaire
+    setFormData({
+      firstName: teacher.firstName || '',
+      email: teacher.email || '',
+      phone: teacher.phone || '',
+      address: {
+        street: teacher.address?.street || '',
+        city: teacher.address?.city || ''
+      },
+      subjects: teacher.subjects?.map(s => s._id || s) || [],
+      classes: teacher.classes?.map(c => c._id || c) || []
+    });
+    
     // Charger la prévisualisation de l'image si elle existe
     if (teacher.photo) {
       setPreview(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/../uploads/teachers/${teacher.photo}`);
+    } else {
+      setPreview(null);
     }
+
+    // Focus smooth sur le formulaire après un court délai pour permettre le rendu
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
   };
 
   const handleView = (teacher) => {
@@ -176,7 +215,22 @@ const Teachers = () => {
             <Download className="w-5 h-5" />
             <span>تصدير</span>
           </button>
-          <button className="btn-primary flex items-center space-x-2 space-x-reverse" onClick={() => {setShowForm(true); setEditingTeacher(null); setPreview(null);}}>
+          <button className="btn-primary flex items-center space-x-2 space-x-reverse" onClick={() => {
+            setShowForm(true); 
+            setEditingTeacher(null); 
+            setPreview(null);
+            setFormData({
+              firstName: '',
+              email: '',
+              phone: '',
+              address: {
+                street: '',
+                city: ''
+              },
+              subjects: [],
+              classes: []
+            });
+          }}>
             <Plus className="w-5 h-5" />
             <span>إضافة أستاذ جديد</span>
           </button>
@@ -185,12 +239,27 @@ const Teachers = () => {
 
       {/* Formulaire d'ajout d'enseignant */}
       {showForm && (
-        <div className="card">
+        <div className="card" ref={formRef}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">
               {editingTeacher ? 'تعديل الأستاذ' : 'إضافة أستاذ جديد'}
             </h2>
-            <button className="text-secondary-600 hover:text-secondary-800" onClick={() => {setShowForm(false); setEditingTeacher(null); setPreview(null);}}>
+            <button className="text-secondary-600 hover:text-secondary-800" onClick={() => {
+              setShowForm(false); 
+              setEditingTeacher(null); 
+              setPreview(null);
+              setFormData({
+                firstName: '',
+                email: '',
+                phone: '',
+                address: {
+                  street: '',
+                  city: ''
+                },
+                subjects: [],
+                classes: []
+              });
+            }}>
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -201,7 +270,8 @@ const Teachers = () => {
                 name="firstName" 
                 className="input-field" 
                 placeholder="الاسم الكامل" 
-                defaultValue={editingTeacher?.firstName || ''}
+                value={formData.firstName}
+                onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                 required 
               />
             </div>
@@ -211,7 +281,8 @@ const Teachers = () => {
                 type="email" 
                 name="email" 
                 className="input-field" 
-                defaultValue={editingTeacher?.email || ''}
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
                 required 
               />
             </div>
@@ -221,7 +292,8 @@ const Teachers = () => {
                 type="tel" 
                 name="phone" 
                 className="input-field" 
-                defaultValue={editingTeacher?.phone || ''}
+                value={formData.phone}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
               />
             </div>
             <div>
@@ -236,7 +308,8 @@ const Teachers = () => {
               <input 
                 name="address.street" 
                 className="input-field" 
-                defaultValue={editingTeacher?.address?.street || ''}
+                value={formData.address.street}
+                onChange={(e) => setFormData({...formData, address: {...formData.address, street: e.target.value}})}
               />
             </div>
             <div>
@@ -244,12 +317,19 @@ const Teachers = () => {
               <input 
                 name="address.city" 
                 className="input-field" 
-                defaultValue={editingTeacher?.address?.city || ''}
+                value={formData.address.city}
+                onChange={(e) => setFormData({...formData, address: {...formData.address, city: e.target.value}})}
               />
             </div>
             <div>
               <label className="label">المادة (اختياري)</label>
-              <select name="subjects" className="input-field" multiple>
+              <select 
+                name="subjects" 
+                className="input-field" 
+                multiple
+                value={formData.subjects}
+                onChange={(e) => setFormData({...formData, subjects: Array.from(e.target.selectedOptions, option => option.value)})}
+              >
                 {subjects.map((subject) => (
                   <option key={subject._id} value={subject._id}>{subject.name}</option>
                 ))}
@@ -257,7 +337,13 @@ const Teachers = () => {
             </div>
             <div>
               <label className="label">الفصول (اختياري)</label>
-              <select name="classes" className="input-field" multiple>
+              <select 
+                name="classes" 
+                className="input-field" 
+                multiple
+                value={formData.classes}
+                onChange={(e) => setFormData({...formData, classes: Array.from(e.target.selectedOptions, option => option.value)})}
+              >
                 {classes.map((cls) => (
                   <option key={cls._id} value={cls._id}>{cls.name}</option>
                 ))}
@@ -267,7 +353,22 @@ const Teachers = () => {
               <button 
                 type="button" 
                 className="btn-secondary" 
-                onClick={() => {setShowForm(false); setEditingTeacher(null); setPreview(null);}} 
+                onClick={() => {
+                  setShowForm(false); 
+                  setEditingTeacher(null); 
+                  setPreview(null);
+                  setFormData({
+                    firstName: '',
+                    email: '',
+                    phone: '',
+                    address: {
+                      street: '',
+                      city: ''
+                    },
+                    subjects: [],
+                    classes: []
+                  });
+                }} 
                 disabled={submitting}
               >
                 إلغاء

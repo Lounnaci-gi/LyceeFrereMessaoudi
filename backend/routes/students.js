@@ -45,7 +45,7 @@ router.get('/', auth, async (req, res) => {
     const students = await Student.find(filter)
       .populate('class', 'name level specialty')
       .populate('class.specialty', 'name code')
-      .populate('parents.parent', 'firstName lastName email phone')
+      .populate('parents.parent', 'firstName lastName email phone relationship')
       .skip((page - 1) * limit)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -150,7 +150,7 @@ router.get('/:id', auth, async (req, res) => {
     const student = await Student.findById(req.params.id)
       .populate('class', 'name level specialty academicYear')
       .populate('class.specialty', 'name code')
-      .populate('parents.parent', 'firstName lastName email phone address relationship');
+      .populate('parents.parent', 'firstName lastName email phone relationship');
 
     if (!student) {
       return res.status(404).json({
@@ -184,13 +184,16 @@ router.post('/', [
   body('dateOfBirth').isISO8601().withMessage('Date de naissance invalide'),
   body('gender').isIn(['male', 'female']).withMessage('Genre invalide'),
   body('class').isMongoId().withMessage('Classe invalide'),
-  body('email').optional().isEmail().withMessage('Email invalide'),
+  body('email').optional().if(body('email').notEmpty()).isEmail().withMessage('Email invalide'),
   body('schoolingType').isIn(['externe', 'demi-pensionnaire']).withMessage('Type de scolarité invalide')
 ], async (req, res) => {
   try {
+    console.log('POST /students - Données reçues:', JSON.stringify(req.body, null, 2));
+    
     // Validation des données
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Erreurs de validation étudiants:', errors.array());
       return res.status(400).json({
         success: false,
         message: 'Données invalides',
@@ -208,7 +211,7 @@ router.post('/', [
     }
 
     // Vérifier si l'email existe déjà (si fourni)
-    if (req.body.email) {
+    if (req.body.email && req.body.email.trim()) {
       const existingEmail = await Student.findOne({ email: req.body.email });
       if (existingEmail) {
         return res.status(400).json({
@@ -283,7 +286,7 @@ router.put('/:id', [
   body('lastName').optional().notEmpty().withMessage('Le nom de famille ne peut pas être vide'),
   body('dateOfBirth').optional().isISO8601().withMessage('Date de naissance invalide'),
   body('gender').optional().isIn(['male', 'female']).withMessage('Genre invalide'),
-  body('email').optional().isEmail().withMessage('Email invalide'),
+  body('email').optional().if(body('email').notEmpty()).isEmail().withMessage('Email invalide'),
   body('schoolingType').optional().isIn(['externe', 'demi-pensionnaire']).withMessage('Type de scolarité invalide')
 ], async (req, res) => {
   try {
@@ -306,7 +309,7 @@ router.put('/:id', [
     }
 
     // Vérifier si l'email existe déjà (si modifié)
-    if (req.body.email && req.body.email !== student.email) {
+    if (req.body.email && req.body.email.trim() && req.body.email !== student.email) {
       const existingEmail = await Student.findOne({ 
         email: req.body.email,
         _id: { $ne: req.params.id }
@@ -347,7 +350,7 @@ router.put('/:id', [
       { new: true, runValidators: true }
     ).populate('class', 'name level specialty')
      .populate('class.specialty', 'name code')
-     .populate('parents.parent', 'firstName lastName email phone');
+     .populate('parents.parent', 'firstName lastName email phone relationship');
 
     res.json({
       success: true,

@@ -7,6 +7,7 @@ import {
   Home,
   Users,
   UserCheck,
+  UserPlus,
   Calendar,
   AlertTriangle,
   Gavel,
@@ -60,6 +61,12 @@ const Layout = () => {
       path: '/teachers',
       icon: UserCheck,
       roles: ['admin'],
+    },
+    {
+      name: 'أولياء الأمور',
+      path: '/parents',
+      icon: UserPlus,
+      roles: ['admin', 'teacher'],
     },
     {
       name: 'الغيابات',
