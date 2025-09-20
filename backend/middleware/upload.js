@@ -91,7 +91,15 @@ const handleUploadError = (error, req, res, next) => {
     });
   }
   
-  next(error);
+  // Si next est disponible, l'utiliser, sinon retourner une erreur générique
+  if (next && typeof next === 'function') {
+    next(error);
+  } else {
+    return res.status(500).json({
+      success: false,
+      message: 'خطأ في رفع الملف'
+    });
+  }
 };
 
 // Fonction pour supprimer un fichier

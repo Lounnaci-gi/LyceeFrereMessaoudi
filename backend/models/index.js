@@ -332,6 +332,31 @@ const studentSchema = new mongoose.Schema({
       required: true
     }
   }],
+  // Informations familiales
+  familySituation: {
+    type: String,
+    enum: ['married', 'divorced', 'father_deceased', 'mother_deceased', 'both_deceased'],
+    required: false,
+    default: null
+  },
+  financialSituation: {
+    type: String,
+    enum: ['stable', 'precarious'],
+    required: false,
+    default: null
+  },
+  childrenCount: {
+    boys: {
+      type: Number,
+      required: false,
+      default: 0
+    },
+    girls: {
+      type: Number,
+      required: false,
+      default: 0
+    }
+  },
   enrollmentDate: {
     type: Date,
     default: Date.now

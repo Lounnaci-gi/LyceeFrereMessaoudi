@@ -235,8 +235,21 @@ router.post('/', [
       ...req.body,
       dateOfBirth: new Date(req.body.dateOfBirth),
       photo: req.file ? req.file.filename : null,
-      parents: req.body.parents ? JSON.parse(req.body.parents) : []
+      parents: req.body.parents ? JSON.parse(req.body.parents) : [],
+      // Extraire les informations familiales des données parents
+      familySituation: req.body['parents.familySituation'] || null,
+      financialSituation: req.body['parents.financialSituation'] || null,
+      childrenCount: {
+        boys: parseInt(req.body['parents.childrenCount.boys']) || 0,
+        girls: parseInt(req.body['parents.childrenCount.girls']) || 0
+      }
     };
+
+    // Nettoyer les données pour éviter les conflits
+    delete studentData['parents.familySituation'];
+    delete studentData['parents.financialSituation'];
+    delete studentData['parents.childrenCount.boys'];
+    delete studentData['parents.childrenCount.girls'];
 
     // Créer l'étudiant
     const student = new Student(studentData);
@@ -328,6 +341,26 @@ router.put('/:id', [
     if (req.body.dateOfBirth) {
       updateData.dateOfBirth = new Date(req.body.dateOfBirth);
     }
+
+    // Extraire les informations familiales des données parents
+    if (req.body['parents.familySituation'] !== undefined) {
+      updateData.familySituation = req.body['parents.familySituation'] || null;
+    }
+    if (req.body['parents.financialSituation'] !== undefined) {
+      updateData.financialSituation = req.body['parents.financialSituation'] || null;
+    }
+    if (req.body['parents.childrenCount.boys'] !== undefined || req.body['parents.childrenCount.girls'] !== undefined) {
+      updateData.childrenCount = {
+        boys: parseInt(req.body['parents.childrenCount.boys']) || 0,
+        girls: parseInt(req.body['parents.childrenCount.girls']) || 0
+      };
+    }
+
+    // Nettoyer les données pour éviter les conflits
+    delete updateData['parents.familySituation'];
+    delete updateData['parents.financialSituation'];
+    delete updateData['parents.childrenCount.boys'];
+    delete updateData['parents.childrenCount.girls'];
 
     if (req.file) {
       // Supprimer l'ancienne photo si elle existe

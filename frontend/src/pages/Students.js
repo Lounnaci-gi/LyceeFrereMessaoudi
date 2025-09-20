@@ -1,15 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Users, Plus, Search, Filter, Download, X, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Filter, X, Edit, Trash2, Eye, Printer } from 'lucide-react';
 import { studentsService } from '../services/studentsService';
 import { parentsService } from '../services/parentsService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import ConfirmDialog from '../components/ConfirmDialog';
+import StudentDetailsDialog from '../components/StudentDetailsDialog';
+import StudentCard from '../components/StudentCard';
 
 const Students = () => {
   const { isAuthenticated, loading } = useAuth();
-  const { showSuccess, showError, showConfirmDialog } = useNotification();
+  const { showSuccess, showError } = useNotification();
   const [showForm, setShowForm] = useState(false);
   const [showClassForm, setShowClassForm] = useState(false);
   const [showSpecialtyForm, setShowSpecialtyForm] = useState(false);
@@ -29,6 +30,10 @@ const Students = () => {
   const [specialtySearch, setSpecialtySearch] = useState('');
   const [classSearch, setClassSearch] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, studentId: null });
+  const [showStudentDetails, setShowStudentDetails] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [showStudentCard, setShowStudentCard] = useState(false);
+  const [cardStudent, setCardStudent] = useState(null);
   const formRef = useRef(null);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -244,9 +249,35 @@ const Students = () => {
   };
 
   // Fonctions de gestion des actions
-  const handleView = (student) => {
-    // TODO: Implémenter la vue détaillée de l'élève
-    alert(`عرض تفاصيل التلميذ: ${student.firstName} ${student.lastName}`);
+  const handleView = async (student) => {
+    try {
+      // Charger les détails complets de l'élève avec les informations des parents
+      let studentWithParents = { ...student };
+      
+      if (student.parents && student.parents.length > 0) {
+        const parentsData = [];
+        for (const parentRef of student.parents) {
+          try {
+            const parentRes = await parentsService.getParent(parentRef.parent);
+            if (parentRes.success) {
+              parentsData.push({
+                ...parentRef,
+                parent: parentRes.data
+              });
+            }
+          } catch (err) {
+            console.error('Erreur chargement parent:', err);
+          }
+        }
+        studentWithParents.parents = parentsData;
+      }
+      
+      setSelectedStudent(studentWithParents);
+      setShowStudentDetails(true);
+    } catch (err) {
+      console.error('Erreur chargement détails élève:', err);
+      showError('خطأ في تحميل تفاصيل التلميذ');
+    }
   };
 
   const handleEdit = async (student) => {
@@ -330,6 +361,249 @@ const Students = () => {
       isOpen: true,
       studentId: studentId
     });
+  };
+
+  const handlePrintCard = async (student) => {
+    try {
+      // Charger les détails complets de l'élève avec les informations des parents
+      let studentWithParents = { ...student };
+      
+      if (student.parents && student.parents.length > 0) {
+        const parentsData = [];
+        for (const parentRef of student.parents) {
+          try {
+            const parentRes = await parentsService.getParent(parentRef.parent);
+            if (parentRes.success) {
+              parentsData.push({
+                ...parentRef,
+                parent: parentRes.data
+              });
+            }
+          } catch (err) {
+            console.error('Erreur chargement parent:', err);
+          }
+        }
+        studentWithParents.parents = parentsData;
+      }
+      
+      setCardStudent(studentWithParents);
+      setShowStudentCard(true);
+    } catch (err) {
+      console.error('Erreur chargement détails élève pour impression:', err);
+      showError('خطأ في تحميل تفاصيل التلميذ للطباعة');
+    }
+  };
+
+  const printStudentCard = () => {
+    // Créer une nouvelle fenêtre pour l'impression
+    const printWindow = window.open('', '_blank');
+    const printContent = document.getElementById('student-card');
+    
+    if (printContent) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>بطاقة الطالب - ${cardStudent?.firstName} ${cardStudent?.lastName}</title>
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              direction: rtl;
+              background: white;
+              color: #333;
+              line-height: 1.6;
+            }
+            
+            .student-card-id {
+              width: 8.6cm;
+              height: 5.4cm;
+              margin: 20px auto;
+              padding: 8px;
+              border: 2px solid #2563eb;
+              border-radius: 8px;
+              background: white;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              direction: rtl;
+              position: relative;
+            }
+            
+            .card-header {
+              text-align: center;
+              margin-bottom: 6px;
+              padding-bottom: 4px;
+              border-bottom: 1px solid #2563eb;
+            }
+            
+            .school-name {
+              font-size: 10px;
+              font-weight: bold;
+              color: #1e40af;
+              margin-bottom: 2px;
+            }
+            
+            .card-type {
+              font-size: 8px;
+              color: #3b82f6;
+              font-weight: 500;
+            }
+            
+            .card-content {
+              display: flex;
+              gap: 6px;
+              margin-bottom: 6px;
+            }
+            
+            .photo-section {
+              flex: 0 0 auto;
+            }
+            
+            .student-photo {
+              width: 2.2cm;
+              height: 2.8cm;
+              border: 1px solid #6b7280;
+              border-radius: 4px;
+              overflow: hidden;
+              background: #f3f4f6;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            
+            .student-photo img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+            }
+            
+            .no-photo {
+              color: #6b7280;
+              text-align: center;
+            }
+            
+            .no-photo-icon {
+              font-size: 24px;
+            }
+            
+            .info-section {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+            }
+            
+            .student-name {
+              font-size: 11px;
+              font-weight: bold;
+              color: #111827;
+              margin-bottom: 2px;
+              line-height: 1.2;
+            }
+            
+            .student-id {
+              font-size: 9px;
+              color: #2563eb;
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            
+            .info-grid {
+              display: grid;
+              grid-template-columns: 1fr;
+              gap: 2px;
+            }
+            
+            .info-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 7px;
+              line-height: 1.1;
+            }
+            
+            .info-label {
+              color: #374151;
+              font-weight: 500;
+              flex: 0 0 auto;
+              margin-left: 4px;
+            }
+            
+            .info-value {
+              color: #111827;
+              font-weight: 400;
+              text-align: left;
+              flex: 1;
+            }
+            
+            .card-footer {
+              border-top: 1px solid #d1d5db;
+              padding-top: 4px;
+              text-align: center;
+            }
+            
+            .barcode-section {
+              margin-bottom: 2px;
+            }
+            
+            .barcode {
+              width: 100%;
+              height: 12px;
+            }
+            
+            .footer-text {
+              font-size: 6px;
+              color: #6b7280;
+              font-weight: 400;
+            }
+            
+            @media print {
+              body {
+                margin: 0;
+                padding: 0;
+              }
+              
+              .student-card-id {
+                margin: 0;
+                box-shadow: none;
+                border: 1px solid #000;
+                width: 8.6cm;
+                height: 5.4cm;
+                page-break-inside: avoid;
+              }
+              
+              .student-photo {
+                width: 2.2cm;
+                height: 2.8cm;
+              }
+              
+              .barcode {
+                height: 12px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent.outerHTML}
+        </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      
+      // Attendre que les images se chargent avant d'imprimer
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 1000);
+    }
   };
 
   const confirmDelete = async () => {
@@ -1179,6 +1453,13 @@ const Students = () => {
                         <Eye className="w-4 h-4" />
                       </button>
                       <button 
+                        className="text-green-600 hover:text-green-700" 
+                        title="طباعة البطاقة" 
+                        onClick={() => handlePrintCard(s)}
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
+                      <button 
                         className="text-secondary-600 hover:text-secondary-700" 
                         title="تعديل" 
                         onClick={() => handleEdit(s)}
@@ -1227,6 +1508,27 @@ const Students = () => {
         type="error"
         confirmText="حذف"
         cancelText="إلغاء"
+      />
+
+      {/* Dialogue des détails de l'élève */}
+      <StudentDetailsDialog
+        isOpen={showStudentDetails}
+        onClose={() => {
+          setShowStudentDetails(false);
+          setSelectedStudent(null);
+        }}
+        student={selectedStudent}
+      />
+
+      {/* Dialogue de la carte d'étudiant */}
+      <StudentCard
+        isOpen={showStudentCard}
+        onClose={() => {
+          setShowStudentCard(false);
+          setCardStudent(null);
+        }}
+        student={cardStudent}
+        onPrint={printStudentCard}
       />
     </div>
   );
