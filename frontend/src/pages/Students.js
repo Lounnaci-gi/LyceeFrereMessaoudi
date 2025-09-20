@@ -258,7 +258,7 @@ const Students = () => {
         const parentsData = [];
         for (const parentRef of student.parents) {
           try {
-            const parentRes = await parentsService.getParent(parentRef.parent);
+            const parentRes = await parentsService.getParent(parentRef.parent.toString());
             if (parentRes.success) {
               parentsData.push({
                 ...parentRef,
@@ -372,7 +372,7 @@ const Students = () => {
         const parentsData = [];
         for (const parentRef of student.parents) {
           try {
-            const parentRes = await parentsService.getParent(parentRef.parent);
+            const parentRes = await parentsService.getParent(parentRef.parent.toString());
             if (parentRes.success) {
               parentsData.push({
                 ...parentRef,

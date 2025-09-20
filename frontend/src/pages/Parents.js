@@ -35,15 +35,23 @@ const Parents = () => {
       console.log('Parents response:', res);
       
       if (res.success) {
-        setParents(res.data.parents || []);
+        const parentsData = res.data.parents || [];
+        setParents(parentsData);
         setPagination(res.data.pagination || { page: 1, limit: 10, total: 0, pages: 0 });
-        console.log('Parents loaded:', res.data.parents?.length || 0);
+        console.log('Parents loaded:', parentsData.length);
+        
+        // Afficher un message de succès si des parents sont trouvés
+        if (parentsData.length > 0) {
+          showSuccess(`تم تحميل ${parentsData.length} ولي أمر بنجاح`);
+        }
       } else {
         console.error('Failed to load parents:', res.message);
+        showError(res.message || 'فشل في تحميل قائمة أولياء الأمور');
         setParents([]);
       }
     } catch (e) {
       console.error('Erreur chargement parents:', e);
+      showError('خطأ في الاتصال بالخادم');
       setParents([]);
     }
   };
@@ -99,12 +107,57 @@ const Parents = () => {
         </div>
       </div>
 
+      {/* Statistiques */}
+      {parents.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="card text-center">
+            <div className="text-2xl font-bold text-primary-600">{parents.length}</div>
+            <div className="text-sm text-secondary-600">إجمالي أولياء الأمور</div>
+          </div>
+          <div className="card text-center">
+            <div className="text-2xl font-bold text-secondary-600">
+              {parents.filter(p => p.relationship === 'father').length}
+            </div>
+            <div className="text-sm text-secondary-600">آباء</div>
+          </div>
+          <div className="card text-center">
+            <div className="text-2xl font-bold text-secondary-600">
+              {parents.filter(p => p.relationship === 'mother').length}
+            </div>
+            <div className="text-sm text-secondary-600">أمهات</div>
+          </div>
+          <div className="card text-center">
+            <div className="text-2xl font-bold text-secondary-600">
+              {parents.reduce((total, parent) => total + (parent.children?.length || 0), 0)}
+            </div>
+            <div className="text-sm text-secondary-600">إجمالي الأطفال</div>
+          </div>
+        </div>
+      )}
+
       {/* Liste des parents */}
       <div className="space-y-4">
         {parents.length === 0 ? (
-          <div className="card text-center py-8">
-            <p className="text-secondary-500">لا توجد بيانات أولياء أمور</p>
-            <p className="text-sm text-secondary-400 mt-2">عدد أولياء الأمور: {parents.length}</p>
+          <div className="card text-center py-12">
+            <Users className="w-16 h-16 text-secondary-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-secondary-700 mb-2">لا توجد بيانات أولياء أمور</h3>
+            <p className="text-secondary-500 mb-4">
+              {search || relationshipFilter 
+                ? 'لم يتم العثور على أولياء أمور يطابقون معايير البحث' 
+                : 'لم يتم تسجيل أي ولي أمر بعد'
+              }
+            </p>
+            {search || relationshipFilter ? (
+              <button 
+                onClick={() => {
+                  setSearch('');
+                  setRelationshipFilter('');
+                }}
+                className="btn-secondary"
+              >
+                إعادة تعيين الفلاتر
+              </button>
+            ) : null}
           </div>
         ) : (
           parents.map((parent, index) => (
@@ -113,41 +166,54 @@ const Parents = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="card"
+              className="card hover:shadow-lg transition-shadow duration-200"
             >
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Informations du Parent */}
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    <UserCheck className="w-5 h-5 text-primary-600" />
-                    <h3 className="text-lg font-semibold text-secondary-800">
-                      {parent.relationship === 'father' ? 'معلومات الأب' : 
-                       parent.relationship === 'mother' ? 'معلومات الأم' : 'معلومات الوصي'}
-                    </h3>
-                  </div>
-                  <div className="space-y-2">
-                    <div>
-                      <span className="text-sm text-secondary-600">الاسم الكامل:</span>
-                      <p className="font-medium">
-                        {parent.firstName || 'غير محدد'} {parent.lastName || ''}
-                      </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <UserCheck className="w-5 h-5 text-primary-600" />
+                      <h3 className="text-lg font-semibold text-secondary-800">
+                        {parent.relationship === 'father' ? 'معلومات الأب' : 
+                         parent.relationship === 'mother' ? 'معلومات الأم' : 'معلومات الوصي'}
+                      </h3>
                     </div>
+                    <span className={`badge ${
+                      parent.relationship === 'father' ? 'badge-primary' :
+                      parent.relationship === 'mother' ? 'badge-secondary' : 'badge-info'
+                    }`}>
+                      {parent.relationship === 'father' ? 'أب' :
+                       parent.relationship === 'mother' ? 'أم' : 'وصي'}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <span className="text-sm text-secondary-600 w-20">الاسم:</span>
+                      <span className="font-medium text-secondary-800">
+                        {parent.firstName || 'غير محدد'} {parent.lastName || ''}
+                      </span>
+                    </div>
+                    
                     {parent.phone && (
                       <div className="flex items-center space-x-2 space-x-reverse">
                         <Phone className="w-4 h-4 text-secondary-500" />
-                        <span className="text-sm">{parent.phone}</span>
+                        <span className="text-sm text-secondary-700">{parent.phone}</span>
                       </div>
                     )}
+                    
                     {parent.email && (
                       <div className="flex items-center space-x-2 space-x-reverse">
                         <Mail className="w-4 h-4 text-secondary-500" />
-                        <span className="text-sm">{parent.email}</span>
+                        <span className="text-sm text-secondary-700">{parent.email}</span>
                       </div>
                     )}
+                    
                     {parent.address && (parent.address.street || parent.address.city) && (
                       <div className="flex items-center space-x-2 space-x-reverse">
                         <MapPin className="w-4 h-4 text-secondary-500" />
-                        <span className="text-sm">
+                        <span className="text-sm text-secondary-700">
                           {parent.address.street && parent.address.city 
                             ? `${parent.address.street}, ${parent.address.city}`
                             : parent.address.street || parent.address.city
@@ -155,24 +221,19 @@ const Parents = () => {
                         </span>
                       </div>
                     )}
-                    <div className="flex items-center space-x-2 space-x-reverse">
-                      <span className="text-sm text-secondary-600">العلاقة:</span>
-                      <span className={`badge ${
-                        parent.relationship === 'father' ? 'badge-primary' :
-                        parent.relationship === 'mother' ? 'badge-secondary' : 'badge-info'
-                      }`}>
-                        {parent.relationship === 'father' ? 'أب' :
-                         parent.relationship === 'mother' ? 'أم' : 'وصي'}
-                      </span>
-                    </div>
                   </div>
                 </div>
 
                 {/* Informations des Enfants */}
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    <Users className="w-5 h-5 text-primary-600" />
-                    <h3 className="text-lg font-semibold text-secondary-800">الأطفال المسجلين</h3>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <Users className="w-5 h-5 text-primary-600" />
+                      <h3 className="text-lg font-semibold text-secondary-800">الأطفال المسجلين</h3>
+                    </div>
+                    <span className="badge badge-info">
+                      {parent.children?.length || 0} طفل
+                    </span>
                   </div>
                   
                   {/* Liste des enfants */}
@@ -180,18 +241,22 @@ const Parents = () => {
                     {parent.children && parent.children.length > 0 ? (
                       <div className="space-y-2">
                         {parent.children.map((child, childIndex) => (
-                          <div key={child._id || childIndex} className="flex items-center justify-between p-3 bg-secondary-50 rounded">
-                            <div>
-                              <span className="font-medium">{child.firstName} {child.lastName}</span>
+                          <div key={child._id || childIndex} className="flex items-center justify-between p-3 bg-secondary-50 rounded-lg border">
+                            <div className="flex-1">
+                              <div className="font-medium text-secondary-800">
+                                {child.firstName} {child.lastName}
+                              </div>
                               {child.class && (
-                                <span className="text-sm text-secondary-600 mr-2"> - {child.class.name || child.class}</span>
+                                <div className="text-sm text-secondary-600">
+                                  {child.class.name || child.class} - {child.class.level || ''}
+                                </div>
                               )}
                             </div>
                             <div className="flex items-center space-x-2 space-x-reverse">
-                              <span className={`badge ${child.gender === 'male' ? 'badge-primary' : 'badge-secondary'}`}>
+                              <span className={`badge text-xs ${child.gender === 'male' ? 'badge-primary' : 'badge-secondary'}`}>
                                 {child.gender === 'male' ? 'ذكر' : 'أنثى'}
                               </span>
-                              <span className={`badge ${
+                              <span className={`badge text-xs ${
                                 child.schoolingType === 'externe' 
                                   ? 'badge-info' 
                                   : child.schoolingType === 'demi-pensionnaire' 
@@ -210,9 +275,9 @@ const Parents = () => {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-sm text-warning-600 bg-warning-50 p-3 rounded">
-                        <UserX className="w-4 h-4 inline mr-1" />
-                        لا يوجد أطفال مسجلين لهذا الوالد
+                      <div className="text-center py-6 bg-warning-50 rounded-lg border border-warning-200">
+                        <UserX className="w-8 h-8 text-warning-500 mx-auto mb-2" />
+                        <p className="text-sm text-warning-600">لا يوجد أطفال مسجلين لهذا الوالد</p>
                       </div>
                     )}
                   </div>
@@ -224,11 +289,30 @@ const Parents = () => {
       </div>
 
       {/* Pagination */}
-      {parents.length > 0 && (
+      {parents.length > 0 && pagination.pages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-secondary-600">
-            عرض 1 إلى {parents.length} من أصل {parents.length} ولي أمر
+            عرض {((pagination.page - 1) * pagination.limit) + 1} إلى {Math.min(pagination.page * pagination.limit, pagination.total)} من أصل {pagination.total} ولي أمر
           </p>
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <button
+              onClick={() => fetchParents(pagination.page - 1)}
+              disabled={pagination.page <= 1}
+              className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              السابق
+            </button>
+            <span className="text-sm text-secondary-600">
+              صفحة {pagination.page} من {pagination.pages}
+            </span>
+            <button
+              onClick={() => fetchParents(pagination.page + 1)}
+              disabled={pagination.page >= pagination.pages}
+              className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              التالي
+            </button>
+          </div>
         </div>
       )}
     </div>
